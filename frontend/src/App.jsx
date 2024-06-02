@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import './App.css';
 
 function App() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [editIndex, setEditIndex] = useState(-1); // To track which row is being edited
+  const [newItem, setNewItem] = useState({
+    customerName: '',
+    email: '',
+    productName: '',
+    quantity: '',
+    status: 'Pending'
+  });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,6 +61,44 @@ function App() {
       setData(updatedData);
     } catch (error) {
       console.error("Error deleting the item", error);
+      setError(error);
+    }
+  };
+
+  const handleNewChange = (e) => {
+    const { name, value } = e.target;
+    setNewItem({ ...newItem, [name]: value });
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'Pending':
+        return 'blue';
+      case 'Shipped':
+        return 'green';
+      case 'Delivered':
+        return 'purple';
+      case 'Cancelled':
+        return 'red';
+      default:
+        return 'black';
+    }
+  };
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post('https://order-status-montero.netlify.app/.netlify/functions/api', newItem);
+      setData(prevData => [...prevData, response.data]); // Update state with new data
+      setNewItem({
+        customerName: '',
+        email: '',
+        productName: '',
+        quantity: '',
+        status: 'Pending'
+      });
+    } catch (error) {
+      console.error("Error adding the item", error);
       setError(error);
     }
   };
@@ -116,7 +162,7 @@ function App() {
             item.quantity
           )}
         </td>
-        <td>
+        <td style={{ color: getStatusColor(item.status) }}>
           {editIndex === index ? (
             <input
               type="text"
@@ -129,19 +175,57 @@ function App() {
         </td>
         <td>
           {editIndex === index ? (
-            <button onClick={() => handleSave(index)}>Save</button>
+            <button className='save-btn' onClick={() => handleSave(index)}>Save</button>
           ) : (
-            <button onClick={() => handleEdit(index)}>Edit</button>
+            <button className='edit-btn' onClick={() => handleEdit(index)}>Edit</button>
           )}
-          <button onClick={() => handleDelete(item._id)}>Delete</button>
+          <button className='delete-btn' onClick={() => handleDelete(item._id)}>Delete</button>
         </td>
       </tr>
     ));
   };
 
   return (
-    <div>
+    <div className="container">
+      <div className='form-container'>
       <h1>Order Status</h1>
+      <form onSubmit={handleAdd}>
+        <input
+          type="text"
+          name="customerName"
+          placeholder="Customer Name"
+          value={newItem.customerName}
+          onChange={handleNewChange}
+          required
+        />
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          value={newItem.email}
+          onChange={handleNewChange}
+          required
+        />
+        <input
+          type="text"
+          name="productName"
+          placeholder="Product Name"
+          value={newItem.productName}
+          onChange={handleNewChange}
+          required
+        />
+        <input
+          type="number"
+          name="quantity"
+          placeholder="Quantity"
+          value={newItem.quantity}
+          onChange={handleNewChange}
+          required
+        />
+        <button className='addOrder-btn' type="submit">Add Order</button>
+      </form>
+      </div>
+      <div className='table-container'>
       <table>
         <thead>
           {renderTableHeader()}
@@ -150,6 +234,7 @@ function App() {
           {renderTableRows()}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
